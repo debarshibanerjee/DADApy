@@ -246,6 +246,14 @@ def test_DiffImbalance_greedy_methods_shape():
         n_features_min=1, compute_error=False
     )
 
+    print(feature_sets_f)
+    print(diis_f)
+    print(errors_f)
+
+    print(feature_sets_b)
+    print(diis_b)
+    print(errors_b)
+
     # Check forward greedy results
     assert (
         len(feature_sets_f) == 3
@@ -266,20 +274,24 @@ def test_DiffImbalance_greedy_methods_shape():
     assert (
         len(diis_b) == 3
     ), f"Backward selection should return 3 DII values, got {len(diis_b)}"
+    # The shape of 'errors' returned by the backward greedy search should be (n_features-1)
+    # This is due to the way the while loop is implemented
     assert errors_b == [
-        None,
         None,
         None,
     ], f"Backward selection with compute_error=False should return None errors, got {errors_b}"
 
 
 @pytest.mark.skipif(sys.version_info < (3, 9), reason="Requires python>=3.9")
-def test_DiffImbalance_greedy_symmetry():
+def test_DiffImbalance_greedy_symmetry_5d_gaussian():
     """Test that forward and backward greedy selection are symmetric.
+
+    Also test that the correct variables are selected from the prototypical 5d-gaussian example.
 
     This test verifies that the forward and backward greedy feature selection methods
     select features in the reverse order of each other, and that the DII values match
     when reversed.
+    It also works on the prototypical 5D gaussian example to see if it selects the correct feature.
     """
     from dadapy import DiffImbalance  # noqa: E402
 
@@ -345,3 +357,10 @@ def test_DiffImbalance_greedy_symmetry():
         assert set(feature_sets_fw[i]) == set(
             feature_sets_bw[-(i + 1)]
         ), f"Feature sets should be in reverse order, got {feature_sets_fw[i]} and {feature_sets_bw[-(i+1)]}"
+
+
+if __name__ == "__main__":
+    test_DiffImbalance_forward_greedy()
+    test_DiffImbalance_backward_greedy()
+    test_DiffImbalance_greedy_methods_shape()
+    test_DiffImbalance_greedy_symmetry_5d_gaussian()

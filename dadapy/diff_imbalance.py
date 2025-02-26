@@ -1092,132 +1092,6 @@ class DiffImbalance:
 
         return best_feature_sets, best_diis, best_errors
 
-    # def backward_greedy_feature_selection(
-    #     self,
-    #     n_features_min=1,
-    #     compute_error=False,
-    #     ratio_rows_columns=1,
-    #     seed=0,
-    #     discard_close_ind=0,
-    # ):
-    #     """Performs backward greedy feature selection using the Differentiable Information Imbalance.
-
-    #     Starting with all features, the algorithm progressively removes the least informative features
-    #     one at a time, until either no features are left or n_features_min is reached.
-
-    #     Args:
-    #         n_features_min (int): minimum number of features to select. Default is 1.
-    #         compute_error (bool): whether to compute error estimates for the DII. Default is False.
-    #         ratio_rows_columns (float): ratio between the number of points along rows and columns when
-    #             computing the DII. Only used when compute_error is True. Default is 1.
-    #         seed (int): seed for random number generation. Default is 0.
-    #         discard_close_ind (int): index to discard close points when computing the DII. Default is 0.
-
-    #     Returns:
-    #         feature_sets (list): list of lists, where each sublist contains the indices of the selected
-    #             features at each iteration.
-    #         diis (list): list of DII values corresponding to each set of selected features.
-    #         errors (list): list of error estimates for each DII value. Only meaningful if compute_error is True.
-    #     """
-    #     assert self.params_final is not None, "First call the train() method!"
-
-    #     n_features = self.nfeatures_A
-
-    #     # Initialize lists to store results
-    #     feature_sets = []
-    #     diis = []
-    #     errors = []
-
-    #     # Start with all features
-    #     current_features = list(range(n_features))
-
-    #     # First evaluate DII with all features
-    #     if compute_error:
-    #         dii, error = self._compute_final_diff_imbalance_and_error(
-    #             params=self.params_final,
-    #             batch_A_rows=self.data_A_rows,
-    #             batch_A_columns=self.data_A_columns,
-    #             batch_B_ranks=self.ranks_B,
-    #             k=self.k_final,
-    #         )
-    #         errors.append(error)
-    #     else:
-    #         dii = self._compute_final_diff_imbalance(
-    #             params=self.params_final,
-    #             batch_A_rows=self.data_A_rows,
-    #             batch_A_columns=self.data_A_columns,
-    #             batch_B_ranks=self.ranks_B,
-    #             k=self.k_final,
-    #         )
-
-    #     feature_sets.append(current_features.copy())
-    #     diis.append(dii)
-
-    #     # Loop until we have the minimum number of features
-    #     while len(current_features) > n_features_min:
-    #         candidate_diis = []
-    #         candidate_errors = []
-    #         candidate_features = []
-
-    #         # Try removing each feature
-    #         for i, feature in enumerate(current_features):
-    #             # Create candidate feature set by removing this feature
-    #             candidate_set = current_features.copy()
-    #             candidate_set.pop(i)
-    #             candidate_features.append(candidate_set)
-
-    #             # Create mask for this candidate set
-    #             mask = jnp.zeros(n_features, dtype=bool)
-    #             mask = mask.at[jnp.array(candidate_set)].set(True)
-
-    #             # Create parameters with only the candidate features
-    #             params = jnp.where(mask, self.params_final, 0.0)
-
-    #             # Compute DII for this candidate set
-    #             if compute_error:
-    #                 dii, error = self._compute_final_diff_imbalance_and_error(
-    #                     params=params,
-    #                     batch_A_rows=self.data_A_rows,
-    #                     batch_A_columns=self.data_A_columns,
-    #                     batch_B_ranks=self.ranks_B,
-    #                     k=self.k_final,
-    #                 )
-    #                 candidate_errors.append(error)
-    #             else:
-    #                 dii = self._compute_final_diff_imbalance(
-    #                     params=params,
-    #                     batch_A_rows=self.data_A_rows,
-    #                     batch_A_columns=self.data_A_columns,
-    #                     batch_B_ranks=self.ranks_B,
-    #                     k=self.k_final,
-    #                 )
-
-    #             candidate_diis.append(dii)
-
-    #         # Convert to numpy arrays for easier manipulation
-    #         candidate_diis = np.array(candidate_diis)
-
-    #         # Find the best candidate (lowest DII)
-    #         best_idx = np.argmin(candidate_diis)
-
-    #         # Update current feature set
-    #         current_features = candidate_features[best_idx]
-
-    #         # Store results
-    #         feature_sets.append(current_features.copy())
-    #         diis.append(candidate_diis[best_idx])
-
-    #         if compute_error:
-    #             candidate_errors = np.array(candidate_errors)
-    #             errors.append(candidate_errors[best_idx])
-    #         else:
-    #             errors.append(None)
-
-    #         if len(current_features) == n_features_min:
-    #             break
-
-    #     return feature_sets, diis, errors
-
     def backward_greedy_feature_selection(
         self,
         n_features_min=1,
@@ -1338,5 +1212,8 @@ class DiffImbalance:
                 errors.append(candidate_errors[best_idx])
             else:
                 errors.append(None)
+
+            # if len(current_features) == n_features_min:
+            #     break
 
         return feature_sets, diis, errors
