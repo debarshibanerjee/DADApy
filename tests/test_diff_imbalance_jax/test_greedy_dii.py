@@ -181,8 +181,8 @@ def test_DiffImbalance_backward_greedy():
 
     # Check final feature set has only one feature
     assert (
-        len(feature_sets[2]) == 1
-    ), f"Final feature set should have 1 feature, got {feature_sets[2]}"
+        len(feature_sets[-1]) == 1
+    ), f"Final feature set should have 1 feature, got {feature_sets[-1]}"
 
     # Check DII trend
     if expected_dii_trend == "increasing":
@@ -246,14 +246,6 @@ def test_DiffImbalance_greedy_methods_shape():
         n_features_min=1, compute_error=False
     )
 
-    print(feature_sets_f)
-    print(diis_f)
-    print(errors_f)
-
-    print(feature_sets_b)
-    print(diis_b)
-    print(errors_b)
-
     # Check forward greedy results
     assert (
         len(feature_sets_f) == 3
@@ -267,7 +259,7 @@ def test_DiffImbalance_greedy_methods_shape():
         None,
     ], f"Forward selection with compute_error=False should return None errors, got {errors_f}"
 
-    # Check backward greedy results
+    # Check backward greedy results - expecting 3 feature sets based on previous test
     assert (
         len(feature_sets_b) == 3
     ), f"Backward selection should return 3 feature sets, got {len(feature_sets_b)}"
@@ -281,7 +273,75 @@ def test_DiffImbalance_greedy_methods_shape():
     ], f"Backward selection with compute_error=False should return None errors, got {errors_b}"
 
 
-if __name__ == "__main__":
-    test_DiffImbalance_forward_greedy()
-    test_DiffImbalance_backward_greedy()
-    test_DiffImbalance_greedy_methods_shape()
+@pytest.mark.skipif(sys.version_info < (3, 9), reason="Requires python>=3.9")
+def test_DiffImbalance_greedy_symmetry():
+    """Test that forward and backward greedy selection are symmetric.
+
+    This test verifies that the forward and backward greedy feature selection methods
+    select features in the reverse order of each other, and that the DII values match
+    when reversed.
+    """
+    from dadapy import DiffImbalance  # noqa: E402
+
+    # generate test data with 5 dimensions
+    np.random.seed(0)
+    weights_ground_truth = np.array([10, 3, 1, 30, 7.3])
+    data_A = np.random.normal(loc=0, scale=1.0, size=(500, 5))
+    data_B = weights_ground_truth[np.newaxis, :] * data_A
+
+    # train the DII to recover ground-truth metric
+    dii = DiffImbalance(
+        data_A,
+        data_B,
+        periods_A=None,
+        periods_B=None,
+        seed=0,
+        num_epochs=10,
+        batches_per_epoch=1,
+        l1_strength=0.0,
+        point_adapt_lambda=False,
+        k_init=10,
+        k_final=1,
+        lambda_factor=1e-1,
+        params_init=None,
+        optimizer_name="sgd",
+        learning_rate=1e-1,
+        learning_rate_decay="cos",
+        num_points_rows=None,
+    )
+    weights, imbs = dii.train()
+
+    # Run forward and backward greedy feature selection
+    feature_sets_fw, diis_fw, _ = dii.forward_greedy_feature_selection(
+        n_features_max=5, compute_error=False
+    )
+    feature_sets_bw, diis_bw, _ = dii.backward_greedy_feature_selection(
+        n_features_min=1, compute_error=False
+    )
+
+    # Expected results based on REPL output
+    expected_fw_sets = [[3], [3, 0], [3, 0, 4], [3, 0, 4, 1], [3, 0, 4, 1, 2]]
+    expected_bw_sets = [[0, 1, 2, 3, 4], [0, 1, 3, 4], [0, 3, 4], [0, 3], [3]]
+
+    # Check forward greedy results
+    assert (
+        feature_sets_fw == expected_fw_sets
+    ), f"Forward selection should return {expected_fw_sets}, got {feature_sets_fw}"
+
+    # Check backward greedy results
+    assert (
+        feature_sets_bw == expected_bw_sets
+    ), f"Backward selection should return {expected_bw_sets}, got {feature_sets_bw}"
+
+    # Check that the DII values match when reversed
+    diis_fw_array = np.array(diis_fw)
+    diis_bw_array = np.array(diis_bw)
+    assert np.allclose(
+        diis_bw_array, diis_fw_array[::-1], atol=1e-2
+    ), f"DII values should match when reversed, got {diis_bw_array} and {diis_fw_array[::-1]}"
+
+    # Check that the feature sets are in reverse order
+    for i in range(len(feature_sets_fw)):
+        assert set(feature_sets_fw[i]) == set(
+            feature_sets_bw[-(i + 1)]
+        ), f"Feature sets should be in reverse order, got {feature_sets_fw[i]} and {feature_sets_bw[-(i+1)]}"
